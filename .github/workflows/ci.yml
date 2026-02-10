@@ -1,0 +1,54 @@
+name: Rust CI
+
+# Trigger the workflow on push or pull request to the main branch
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Install the latest stable Rust toolchain
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      # Cache dependencies so future runs are faster
+      - name: Cache Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # 1. Check Formatting (Standard style)
+      - name: Check Formatting
+        run: cargo fmt -- --check
+
+      # 2. Linting (Catch common mistakes)
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      # 3. Build the Shell
+      - name: Build
+        run: cargo build --verbose
+
+      # 4. Run Tests
+      - name: Run Tests
+        run: cargo test --verbose
