@@ -8,7 +8,7 @@ pub enum ParseResult {
 pub fn parse_input(input: &str) -> ParseResult {
     let mut args = Vec::new();
     let mut current_arg = String::new();
-    
+
     let mut in_single_quote = false;
     let mut in_double_quote = false;
     let mut escaped = false;
@@ -77,4 +77,40 @@ pub fn parse_input(input: &str) -> ParseResult {
     }
 
     ParseResult::Ok(args)
+}
+
+// ... (keep all your existing code in parser.rs)
+
+// Add this at the bottom:
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basic_command() {
+        let input = "ls -la";
+        let expected = ParseResult::Ok(vec!["ls".to_string(), "-la".to_string()]);
+        assert_eq!(parse_input(input), expected);
+    }
+
+    #[test]
+    fn test_single_quotes() {
+        let input = "echo 'hello world'";
+        let expected = ParseResult::Ok(vec!["echo".to_string(), "hello world".to_string()]);
+        assert_eq!(parse_input(input), expected);
+    }
+
+    #[test]
+    fn test_double_quotes_with_escape() {
+        let input = "echo \"hello \\\"world\\\"\"";
+        // Should parse as: echo, hello "world"
+        let expected = ParseResult::Ok(vec!["echo".to_string(), "hello \"world\"".to_string()]);
+        assert_eq!(parse_input(input), expected);
+    }
+
+    #[test]
+    fn test_incomplete_quote() {
+        let input = "echo \"missing quote";
+        assert_eq!(parse_input(input), ParseResult::Incomplete);
+    }
 }

@@ -24,3 +24,31 @@ impl PwdState {
         self.old_dir.clone()
     }
 }
+
+// ... existing code ...
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_initial_state() {
+        // Test that the constructor sets values correctly
+        let pwd = PwdState::new("/home/user".to_string(), "/home".to_string());
+
+        assert_eq!(pwd.get_current_dir(), "/home/user");
+        assert_eq!(pwd.get_old_dir(), "/home");
+    }
+
+    #[test]
+    fn test_update_state() {
+        let mut pwd = PwdState::new("/var".to_string(), "/".to_string());
+
+        // Simulate 'cd /etc'
+        // New Current: /etc, New Old: /var
+        pwd.set_states("/etc".to_string(), "/var".to_string());
+
+        assert_eq!(pwd.get_current_dir(), "/etc");
+        assert_eq!(pwd.get_old_dir(), "/var");
+    }
+}

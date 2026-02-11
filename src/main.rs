@@ -8,15 +8,11 @@ use crossterm::{
     terminal::{Clear, ClearType, enable_raw_mode, size},
 };
 use std::io::{self, Write, stdout};
+use std::process::Command;
 
 use helper::parser::{ParseResult, parse_input};
 use helper::print_banner::{GREEN, RESET, print_banner};
 use helper::state_manager::{RawModeGuard, ShellState};
-
-// 🛠️ HELPER: Convert Character Index -> Byte Index
-fn get_byte_index(s: &str, char_idx: usize) -> usize {
-    s.chars().take(char_idx).map(|c| c.len_utf8()).sum()
-}
 
 fn main() -> io::Result<()> {
     let _guard = RawModeGuard;
@@ -108,7 +104,22 @@ fn main() -> io::Result<()> {
                                 ParseResult::Ok(args) => {
                                     if !args.is_empty() {
                                         shell.commit_to_history();
-                                        println!("Debug: Executing {:?}", args);
+                                        let cmd = &args[0];
+
+                                        if cmd == "exit" {
+                                            return Ok(());
+                                        }
+
+                                        let child = Command::new(cmd).args(&args[1..]).spawn();
+
+                                        match child {
+                                            Ok(mut child_process) => {
+                                                let _ = child_process.wait();
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Command not found: '{}' ({})", cmd, e);
+                                            }
+                                        }
                                     }
                                     shell.reset_buffers();
                                     shell.is_continuation = false;
@@ -171,6 +182,10 @@ fn main() -> io::Result<()> {
     }
 }
 
+// 🛠️ HELPER: Convert Character Index -> Byte Index
+fn get_byte_index(s: &str, char_idx: usize) -> usize {
+    s.chars().take(char_idx).map(|c| c.len_utf8()).sum()
+}
 // --- THE RENDER ENGINE ---
 fn render_system(shell: &ShellState, prompt_len: usize, start_y: &mut u16, current_dir: &str) {
     // 1. Reset visual state
