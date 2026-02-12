@@ -1,8 +1,8 @@
 use crate::command::pwd::PwdState;
 use crossterm::terminal::disable_raw_mode;
 use std::{env, path::PathBuf};
-// --- Helper Macro to reduce noise ---
-// This replaces all those repetitive `if let Err(e) = ...` blocks
+
+// --- Helper Macro ---
 #[macro_export]
 macro_rules! try_log {
     ($res:expr, $msg:expr) => {
@@ -11,6 +11,7 @@ macro_rules! try_log {
         }
     };
 }
+
 // --- cleanup guard ---
 pub struct RawModeGuard;
 impl Drop for RawModeGuard {
@@ -30,9 +31,15 @@ pub struct ShellState {
     pub cursor_idx: usize,
 }
 
+// FIX 1: Add Default implementation
+impl Default for ShellState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellState {
     pub fn new() -> Self {
-        // robust CWD handling
         let cwd = env::current_dir().unwrap_or_else(|_| {
             eprintln!("\r\n[Warning] Failed to get CWD. Defaulting to /");
             PathBuf::from("/")
@@ -57,10 +64,9 @@ impl ShellState {
     }
 
     pub fn commit_to_history(&mut self) {
-        if !self.buffer.trim().is_empty() {
-            if self.history.last() != Some(&self.buffer) {
-                self.history.push(self.buffer.clone());
-            }
+        // FIX 2: Collapsed "if" statements
+        if !self.buffer.trim().is_empty() && self.history.last() != Some(&self.buffer) {
+            self.history.push(self.buffer.clone());
         }
         self.hist_idx = self.history.len();
     }
