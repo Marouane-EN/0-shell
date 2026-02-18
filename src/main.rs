@@ -5,13 +5,12 @@ use crossterm::{
     cursor::{self, MoveToColumn},
     event::{self, Event, KeyCode, KeyEventKind, KeyModifiers},
     execute,
-    terminal::enable_raw_mode,
+    terminal::{disable_raw_mode, enable_raw_mode},
 };
 use std::io::{self, Write, stdout};
-// For now, using built-in commands; in the future, I will use my own
-use std::process::Command;
 
-use helper::parser::{ParseResult, parse_input};
+use helper::executor::execute;
+use helper::parser::{ParseResult, parse_input, CommandEnum};
 use helper::print_banner::print_banner;
 use helper::state_manager::{RawModeGuard, ShellState};
 use helper::ui::{get_byte_index, render_system};
@@ -54,14 +53,15 @@ fn main() -> io::Result<()> {
                 match key.code {
                     KeyCode::Char(c) => {
                         if key.modifiers.contains(KeyModifiers::CONTROL) && c == 'd' {
-                            print!("\r\nexit\r\n");
+                            print!("^D\r\n");
+                            
                             return Ok(());
                         }
                         if key.modifiers.contains(KeyModifiers::CONTROL) && c == 'c' {
                             shell.commit_to_history();
                             shell.reset_buffers();
                             shell.is_continuation = false;
-                            print!("\r\n");
+                            print!("^C\r\n");
                             break;
                         }
 
@@ -104,26 +104,17 @@ fn main() -> io::Result<()> {
                         try_log!(stdout().flush(), "Flush error");
 
                         match parse_input(&shell.buffer) {
-                            ParseResult::Ok(args) => {
-                                if !args.is_empty() {
-                                    shell.commit_to_history();
-                                    let cmd = &args[0];
-
-                                    if cmd == "exit" {
-                                        return Ok(());
-                                    }
-
-                                    let child = Command::new(cmd).args(&args[1..]).spawn();
-
-                                    match child {
-                                        Ok(mut child_process) => {
-                                            let _ = child_process.wait();
-                                        }
-                                        Err(e) => {
-                                            eprintln!("Command not found: '{}' ({})", cmd, e);
-                                        }
-                                    }
+                            ParseResult::Ok(cmd) => {
+                                shell.commit_to_history();
+                                if let CommandEnum::Exit = cmd {
+                                    disable_raw_mode()?;
+                                    return Ok(());
                                 }
+                                disable_raw_mode()?;
+
+                                execute(cmd, &mut shell.pwd);
+                                enable_raw_mode()?;
+
                                 shell.reset_buffers();
                                 shell.is_continuation = false;
                                 break;

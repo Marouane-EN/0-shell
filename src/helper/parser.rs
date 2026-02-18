@@ -1,11 +1,27 @@
 #[derive(Debug, PartialEq)]
 pub enum ParseResult {
-    Ok(Vec<String>),
+    Ok(CommandEnum),
     Incomplete,
     Err(String),
 }
 
-pub fn parse_input(input: &str) -> ParseResult {
+#[derive(Debug, PartialEq)]
+pub enum CommandEnum {
+    Rm(Vec<String>),
+    Cp(Vec<String>),
+    Mv(Vec<String>),
+    Pwd,
+    Cd(Vec<String>, Vec<String>),
+    Echo(Vec<String>),
+    Mkdir(Vec<String>, Vec<String>),
+    Exit,
+    Unknown(String),
+    Cat(Vec<String>),
+    Ls(Vec<String>),
+    Clear,
+}
+
+pub fn parse_tokens(input: &str) -> Result<Vec<String>, String> {
     let mut args = Vec::new();
     let mut current_arg = String::new();
 
@@ -68,7 +84,7 @@ pub fn parse_input(input: &str) -> ParseResult {
 
     // Check for unclosed quotes
     if in_single_quote || in_double_quote || escaped {
-        return ParseResult::Incomplete;
+        return Err("Incomplete".to_string());
     }
 
     // Push the last argument if exists
@@ -76,41 +92,124 @@ pub fn parse_input(input: &str) -> ParseResult {
         args.push(current_arg);
     }
 
-    ParseResult::Ok(args)
+    Ok(args)
 }
 
-// ... (keep all your existing code in parser.rs)
+pub fn parse_input(input: &str) -> ParseResult {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return ParseResult::Ok(CommandEnum::Unknown("".to_string()));
+    }
 
-// Add this at the bottom:
+    match parse_tokens(trimmed) {
+        Ok(args) => {
+            if args.is_empty() {
+                return ParseResult::Ok(CommandEnum::Unknown("".to_string()));
+            }
+            let cmd_name = &args[0];
+            let cmd_args = args[1..].to_vec();
+
+            let raw_args = cmd_args.clone();
+            let clean_args: Vec<String> = cmd_args
+                .iter()
+                .map(|ele| ele.replace("\n", "\\n"))
+                .collect();
+
+            let parsed = match cmd_name.as_str() {
+                "ls" => CommandEnum::Ls(clean_args),
+                "cat" => CommandEnum::Cat(clean_args),
+                "cp" => CommandEnum::Cp(clean_args),
+                "pwd" => CommandEnum::Pwd,
+                "cd" => CommandEnum::Cd(clean_args, raw_args),
+                "echo" => CommandEnum::Echo(raw_args),
+                "rm" => CommandEnum::Rm(clean_args),
+                "mkdir" => CommandEnum::Mkdir(raw_args, clean_args),
+                "mv" => CommandEnum::Mv(clean_args),
+                "exit" => CommandEnum::Exit,
+                "clear" => CommandEnum::Clear,
+                _ => CommandEnum::Unknown(cmd_name.clone()),
+            };
+
+            ParseResult::Ok(parsed)
+        }
+        Err(_) => ParseResult::Incomplete,
+    }
+}
+
+// ... (Keep existing code above)
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // --- 1. Test Tokenization Logic ---
     #[test]
-    fn test_basic_command() {
+    fn test_tokenize_simple() {
         let input = "ls -la";
-        let expected = ParseResult::Ok(vec!["ls".to_string(), "-la".to_string()]);
-        assert_eq!(parse_input(input), expected);
+        let expected = Ok(vec!["ls".to_string(), "-la".to_string()]);
+        assert_eq!(parse_tokens(input), expected);
     }
 
     #[test]
-    fn test_single_quotes() {
-        let input = "echo 'hello world'";
-        let expected = ParseResult::Ok(vec!["echo".to_string(), "hello world".to_string()]);
-        assert_eq!(parse_input(input), expected);
+    fn test_tokenize_quotes() {
+        let input = "echo 'hello world' \"formatted string\"";
+        let expected = Ok(vec![
+            "echo".to_string(),
+            "hello world".to_string(),
+            "formatted string".to_string(),
+        ]);
+        assert_eq!(parse_tokens(input), expected);
     }
 
     #[test]
-    fn test_double_quotes_with_escape() {
-        let input = "echo \"hello \\\"world\\\"\"";
-        // Should parse as: echo, hello "world"
-        let expected = ParseResult::Ok(vec!["echo".to_string(), "hello \"world\"".to_string()]);
-        assert_eq!(parse_input(input), expected);
+    fn test_tokenize_escaped_quotes() {
+        // Input: echo "He said \"Hello\""
+        let input = r#"echo "He said \"Hello\"""#;
+        let expected = Ok(vec![
+            "echo".to_string(),
+            "He said \"Hello\"".to_string(), // Parser keeps the internal quotes
+        ]);
+        assert_eq!(parse_tokens(input), expected);
     }
 
     #[test]
-    fn test_incomplete_quote() {
+    fn test_tokenize_incomplete_fails() {
         let input = "echo \"missing quote";
-        assert_eq!(parse_input(input), ParseResult::Incomplete);
+        assert_eq!(parse_tokens(input), Err("Incomplete".to_string()));
+    }
+
+    // --- 2. Test Enum Mapping Logic ---
+    #[test]
+    fn test_parse_input_ls() {
+        let input = "ls -la /tmp";
+        match parse_input(input) {
+            ParseResult::Ok(CommandEnum::Ls(args)) => {
+                assert_eq!(args, vec!["-la", "/tmp"]);
+            }
+            _ => panic!("Expected CommandEnum::Ls"),
+        }
+    }
+
+    #[test]
+    fn test_parse_input_cd() {
+        let input = "cd /home/user";
+        match parse_input(input) {
+            ParseResult::Ok(CommandEnum::Cd(clean, raw)) => {
+                assert_eq!(clean[0], "/home/user");
+                assert_eq!(raw[0], "/home/user");
+            }
+            _ => panic!("Expected CommandEnum::Cd"),
+        }
+    }
+
+    #[test]
+    fn test_parse_input_unknown() {
+        let input = "notacommand arg1";
+        match parse_input(input) {
+            ParseResult::Ok(CommandEnum::Unknown(cmd)) => {
+                assert_eq!(cmd, "notacommand");
+            }
+            _ => panic!("Expected CommandEnum::Unknown"),
+        }
     }
 }
