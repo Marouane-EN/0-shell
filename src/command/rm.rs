@@ -4,13 +4,13 @@ pub fn rm(args: Vec<String>) {
     let mut recursive = false;
 
     for arg in &args {
-        if arg == "--recursive" {
+        if arg == "--recursive" || arg == "--r" || arg == "--R" {
             recursive = true;
             continue;
         }
         if arg.starts_with("-") {
             for c in arg[1..].chars() {
-                if c != '-' && c != 'r' && c != 'R' {
+                if c != 'r' && c != 'R' {
                     println!("rm: invalid option -- '{}'", c);
                     return;
                 }
