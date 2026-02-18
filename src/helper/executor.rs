@@ -1,4 +1,4 @@
-use crate::command::{cd::command_cd, ls::ls, mv::mv, pwd::PwdState};
+use crate::command::{cd::command_cd, cp::cp, ls::ls, mv::mv, pwd::PwdState};
 use crate::helper::parser::CommandEnum;
 use std::process::Command;
 
@@ -23,7 +23,7 @@ pub fn execute(cmd: CommandEnum, pwd_state: &mut PwdState) {
         CommandEnum::Ls(args) => ls(args),
         CommandEnum::Cat(args) => run_external("cat", &args),
         CommandEnum::Rm(args) => run_external("rm", &args),
-        CommandEnum::Cp(args) => run_external("cp", &args),
+        CommandEnum::Cp(args) => cp(args),
         CommandEnum::Mv(args) => mv(args),
         CommandEnum::Echo(args) => run_external("echo", &args),
         CommandEnum::Mkdir(_raw, args) => run_external("mkdir", &args),
