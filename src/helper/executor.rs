@@ -1,6 +1,7 @@
-use crate::command::{cat::cat, cd::command_cd, cp::cp, ls::ls, mv::mv, pwd::PwdState};
+use crate::command::{
+    cat::cat, cd::command_cd, cp::cp, echo::echo, ls::ls, mv::mv, pwd::PwdState, rm::rm,
+};
 use crate::helper::parser::CommandEnum;
-use std::process::Command;
 
 pub fn execute(cmd: CommandEnum, pwd_state: &mut PwdState) {
     match cmd {
@@ -22,27 +23,30 @@ pub fn execute(cmd: CommandEnum, pwd_state: &mut PwdState) {
         // We map all these variants to a helper function
         CommandEnum::Ls(args) => ls(args),
         CommandEnum::Cat(args) => cat(args),
-        CommandEnum::Rm(args) => run_external("rm", &args),
+        CommandEnum::Rm(args) => rm(args),
         CommandEnum::Cp(args) => cp(args),
         CommandEnum::Mv(args) => mv(args),
-        CommandEnum::Echo(args) => run_external("echo", &args),
-        CommandEnum::Mkdir(_raw, args) => run_external("mkdir", &args),
-    }
-}
-
-// Helper to spawn processes
-fn run_external(cmd: &str, args: &[String]) {
-    let child = Command::new(cmd).args(args).spawn();
-
-    match child {
-        Ok(mut child) => {
-            let _ = child.wait();
+        CommandEnum::Echo(args) => echo(args),
+        CommandEnum::Mkdir(dir, error_dir) => {
+            if dir.is_empty() {
+                println!("mkdir: missing operand");
+                return;
+            }
+            let mut count = 0;
+            for d in dir {
+                count += 1;
+                if let Err(e) = std::fs::create_dir(&d) {
+                    eprintln!(
+                        "mkdir: cannot create directory '{}': {}",
+                        error_dir[count - 1],
+                        e
+                    );
+                    return;
+                }
+            }
         }
-        Err(e) => eprintln!("Failed to execute {}: {}", cmd, e),
     }
 }
-
-// ... (Keep existing code above)
 
 #[cfg(test)]
 mod tests {
