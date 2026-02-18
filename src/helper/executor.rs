@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn test_execute_pwd_runs_without_crash() {
         // This test verifies that the built-in Pwd logic runs.
-        // Capturing stdout in Rust tests requires a specific setup, 
+        // Capturing stdout in Rust tests requires a specific setup,
         // so for now we ensure it simply doesn't panic.
         let mut pwd = mock_pwd();
         execute(CommandEnum::Pwd, &mut pwd);
@@ -69,15 +69,15 @@ mod tests {
         let cmd = CommandEnum::Unknown("blarg".to_string());
         execute(cmd, &mut pwd); // Should print error to stderr, but not crash
     }
-    
-    // Note: Testing 'Ls', 'Echo', etc. requires the actual 'ls' binary to exist 
+
+    // Note: Testing 'Ls', 'Echo', etc. requires the actual 'ls' binary to exist
     // on your computer. This is an "Integration Test".
     #[test]
     fn test_execute_echo_integration() {
         let mut pwd = mock_pwd();
         // This tries to actually spawn "echo hello"
         let cmd = CommandEnum::Echo(vec!["hello".to_string()]);
-        execute(cmd, &mut pwd); 
+        execute(cmd, &mut pwd);
         // Pass if no panic occurs
     }
 }

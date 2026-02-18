@@ -10,7 +10,7 @@ use crossterm::{
 use std::io::{self, Write, stdout};
 
 use helper::executor::execute;
-use helper::parser::{ParseResult, parse_input, CommandEnum};
+use helper::parser::{CommandEnum, ParseResult, parse_input};
 use helper::print_banner::print_banner;
 use helper::state_manager::{RawModeGuard, ShellState};
 use helper::ui::{get_byte_index, render_system};
@@ -54,7 +54,7 @@ fn main() -> io::Result<()> {
                     KeyCode::Char(c) => {
                         if key.modifiers.contains(KeyModifiers::CONTROL) && c == 'd' {
                             print!("^D\r\n");
-                            
+
                             return Ok(());
                         }
                         if key.modifiers.contains(KeyModifiers::CONTROL) && c == 'c' {
