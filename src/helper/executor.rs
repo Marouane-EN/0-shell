@@ -1,4 +1,4 @@
-use crate::command::{cd::command_cd, cp::cp, ls::ls, mv::mv, pwd::PwdState};
+use crate::command::{cat::cat, cd::command_cd, cp::cp, ls::ls, mv::mv, pwd::PwdState};
 use crate::helper::parser::CommandEnum;
 use std::process::Command;
 
@@ -21,7 +21,7 @@ pub fn execute(cmd: CommandEnum, pwd_state: &mut PwdState) {
         // EXTERNAL COMMANDS (The Fix)
         // We map all these variants to a helper function
         CommandEnum::Ls(args) => ls(args),
-        CommandEnum::Cat(args) => run_external("cat", &args),
+        CommandEnum::Cat(args) => cat(args),
         CommandEnum::Rm(args) => run_external("rm", &args),
         CommandEnum::Cp(args) => cp(args),
         CommandEnum::Mv(args) => mv(args),
